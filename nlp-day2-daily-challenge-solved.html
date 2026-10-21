@@ -343,20 +343,29 @@ footer .wrap{padding-block:26px 60px; font-size:15px; color:var(--ink-3)}
 <pre><code>!pip install -U pinecone==6.0.1 pinecone-notebooks
 
 import os
+
+# 1. A Colab Secret, if you set one up (key icon in the left sidebar).
+#    Costs nothing when it is not there, and saves you the panel after every restart.
+try:
+    from google.colab import userdata
+    os.environ["PINECONE_API_KEY"] = userdata.get("PINECONE_API_KEY")
+except Exception:
+    pass
+
+# 2. Otherwise, the panel.
 if not os.environ.get("PINECONE_API_KEY"):
     from pinecone_notebooks.colab import Authenticate
-    Authenticate()          # opens a panel; follow it, do not paste the key in a cell
+    Authenticate()          # follow it; never paste the key into a cell
 
 from pinecone import Pinecone
-api_key = os.environ.get("PINECONE_API_KEY")
-pc = Pinecone(api_key=api_key)
+pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
 
 print("connected -", len(pc.list_indexes()), "index(es) in this project")</code></pre>
     </div>
     <div class="walk"><div class="hd">What the code does</div>
       <ol>
         <li><code>pinecone==6.0.1</code> &mdash; pinned on purpose. The client API changed between major versions, and the method names in this challenge are the 6.x ones.</li>
-        <li><code>Authenticate()</code> &mdash; renders a panel that puts your key into <code>os.environ</code>. The <code>if not os.environ.get(...)</code> guard means re-running the cell will not prompt you twice.</li>
+        <li>the <code>try/except</code> block &mdash; reads a <b>Colab Secret</b> if you made one. Wrapped in <code>try</code> so it does nothing when you have not, which means this one cell works either way. Setup is in the panel below.</li><li><code>Authenticate()</code> &mdash; the fallback: a panel that puts your key into <code>os.environ</code>. The <code>if not os.environ.get(...)</code> guard skips it entirely when the secret already supplied the key.</li>
         <li><code>pc</code> &mdash; your handle for everything else: creating indexes, querying, reranking.</li>
         <li>the <code>print</code> is not in the challenge. Add it &mdash; it is the only way to know the key actually worked before you build on it.</li>
       </ol>
@@ -365,6 +374,9 @@ print("connected -", len(pc.list_indexes()), "index(es) in this project")</code>
 <pre>connected - 0 index(es) in this project</pre>
     </div>
     <div class="warn"><span class="lbl">If you get version conflicts</span><p><b>Restart the runtime</b> (Runtime &rarr; Restart session), then run this cell again. Colab pre-loads some of these packages, and pip cannot replace a module that is already imported.</p></div>
+    <div class="warn"><span class="lbl">After ANY restart: <code>NameError: name &rsquo;pc&rsquo; is not defined</code></span><p>This is the error you are most likely to hit today, and it is not a bug in your code. <b>A runtime restart erases every variable</b> &mdash; <code>pc</code>, <code>query</code>, <code>documents</code>, <code>index</code>, all of them. <b>It erases environment variables too</b>, so the key set by <code>Authenticate()</code> is gone with them.</p><p>The trap is that the restart is something the warning above <em>told you to do</em>. You restart to clear a pip conflict, carry on from the cell you had reached, and the next cell fails naming a variable you are certain you created.</p><p><b>The fix is never to re-run one cell.</b> Use <b>Runtime &rarr; Run all</b>, or right-click the cell you are on and choose <b>Run before</b>. You need the habit anyway: &ldquo;restart and run all&rdquo; is exactly the check your submission has to pass.</p><p><b>How to tell a restart happened:</b> the traceback path carries a kernel number &mdash; <code>/tmp/ipykernel_<b>2271</b>/&hellip;</code>. If that number changed since your last error, you are in a new runtime and nothing from before survives.</p></div>
+    <div class="words"><span class="lbl">Set a Colab Secret once and stop re-authenticating</span><p>The <code>Authenticate()</code> panel re-prompts on every fresh runtime, and you will restart more than once today. A Colab Secret survives restarts and is never saved into the notebook.</p><p><b>1.</b> Click the <b>key icon</b> in the Colab left sidebar (Secrets). <b>2.</b> <b>+ Add new secret</b>, name it exactly <code>PINECONE_API_KEY</code>, paste the value. <b>3.</b> Turn on <b>Notebook access</b> for this notebook &mdash; access is granted per notebook, and that is the point.</p><p>The key then lives in your Colab account, not in the <code>.ipynb</code>. <b>Share the notebook and the secret does not travel with it</b> &mdash; which is what you need, because you are submitting a public link.</p><p>Two errors to recognise: <code>SecretNotFoundError</code> means the name does not match (it is case-sensitive), and <code>NotebookAccessError</code> means you created the secret but did not flip the access toggle.</p></div>
+    <div class="warn"><span class="lbl">If you have already pasted your key into a cell</span><p>Deleting the cell is not enough &mdash; the value can sit in the notebook&rsquo;s saved output and its revision history, and you are about to publish a link to it.</p><p><b>Rotate the key</b> in the Pinecone dashboard: create a new one, delete the old. Thirty seconds, and it is the only thing that actually fixes it.</p></div>
     <div class="why2"><span class="lbl">Why this step exists</span><p>Nothing here is reranking yet. Get it green before you go on, because an authentication problem five cells later looks like a completely different bug.</p></div>
   </div>
 </section>
